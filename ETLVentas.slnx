@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="ETLVentas.Data/ETLVentas.Data.csproj" />
+  <Project Path="ETLVentas.Load/ETLVentas.Load.csproj" />
+</Solution>
