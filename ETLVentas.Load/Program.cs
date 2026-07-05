@@ -1,34 +1,30 @@
 ﻿using System;
-using Microsoft.Extensions.Hosting;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
-using Microsoft.EntityFrameworkCore;
-using ETLVentas.Data.Context;
+using Microsoft.Extensions.Hosting;
 using ETLVentas.Data.Interfaces;
 using ETLVentas.Load.Host;
 
-var builder = Host.CreateDefaultBuilder(args);
-
-builder.ConfigureServices((hostContext, services) =>
+namespace ETLVentas.Load
 {
-    var connString = hostContext.Configuration.GetConnectionString("DefaultConnection");
-    services.AddDbContext<AnalisisDeVentasContext>(options =>
-        options.UseSqlServer(connString));
-
-    services.AddEtlServices();
-});
-
-var app = builder.Build();
-
-using (var scope = app.Services.CreateScope())
-{
-    var orchestrator = scope.ServiceProvider.GetRequiredService<IEtlOrchestrator>();
-    try
+    internal class Program
     {
-        await orchestrator.ExecuteEtlAsync();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine("Error critico en la orquestacion del ETL: " + ex.ToString());
+        static async Task Main(string[] args)
+        {
+            using IHost host = AppHost.CreateHost(args);
+
+            using (var scope = host.Services.CreateScope())
+            {
+                var orchestrator = scope.ServiceProvider.GetRequiredService<IEtlOrchestrator>();
+                try
+                {
+                    await orchestrator.ExecuteEtlAsync();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error critico en la orquestacion del ETL: " + ex.ToString());
+                }
+            }
+        }
     }
 }
