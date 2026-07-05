@@ -1,6 +1,7 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using ETLVentas.Data.Context;
 using ETLVentas.Data.Interfaces;
 using ETLVentas.Data.Models.Csv;
@@ -14,6 +15,7 @@ namespace ETLVentas.Data.Services
     {
         private readonly DataCleaner _dataCleaner;
         private readonly DuplicateValidator _duplicateValidator;
+        private HashSet<string>? _existingCountries;
 
         protected override string EntityName => "Country";
 
@@ -30,6 +32,19 @@ namespace ETLVentas.Data.Services
             _duplicateValidator = duplicateValidator;
         }
 
+        public override async Task<EtlReport> ExecuteAsync()
+        {
+            // Cargar países existentes en memoria para evitar N+1 queries
+            var dbCountries = await _context.Countries.AsNoTracking().ToListAsync();
+            _existingCountries = new HashSet<string>();
+            foreach(var c in dbCountries)
+            {
+                _existingCountries.Add(c.CountryName.ToLower());
+            }
+
+            return await base.ExecuteAsync();
+        }
+
         protected override async Task ProcessRecordAsync(
             CountryCsv record, 
             int rowNumber, 
@@ -41,28 +56,28 @@ namespace ETLVentas.Data.Services
             if (string.IsNullOrEmpty(cleanName))
             {
                 result.RejectedRecords++;
+                result.ErrorMessages.Add(ValidationHelper.FormatError(rowNumber.ToString(), "Required Fields", "Nombre de pais vacio"));
                 return;
             }
 
-            if (_duplicateValidator.IsDuplicate(cleanName.ToLower(), uniqueSet))
+            var cleanNameLower = cleanName.ToLower();
+
+            if (_duplicateValidator.IsDuplicate(cleanNameLower, uniqueSet))
             {
                 result.DuplicatedRecords++;
+                result.ErrorMessages.Add(ValidationHelper.FormatError(rowNumber.ToString(), "Duplicate", "Pais duplicado en archivo"));
                 return;
             }
 
-            // Let the Database or Cache handle the existence check later, 
-            // but for Clientes we only insert if not exists. 
-            // Actually, for Country we also check DB.
-            // Wait, we can use EF Core AnyAsync here but it's better to avoid N+1 if possible, 
-            // but wait, since there are only 7 countries it's fast. Let's keep it simple.
-            var exists = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AnyAsync(_context.Countries, c => c.CountryName == cleanName);
-            if (exists)
+            if (_existingCountries != null && _existingCountries.Contains(cleanNameLower))
             {
                 result.DuplicatedRecords++;
+                result.ErrorMessages.Add(ValidationHelper.FormatError(rowNumber.ToString(), "Duplicate", "Pais ya existe en BD"));
                 return;
             }
 
             await procedures.sp_InsertCountryAsync(cleanName);
+            if (_existingCountries != null) _existingCountries.Add(cleanNameLower);
             result.InsertedRecords++;
         }
     }
