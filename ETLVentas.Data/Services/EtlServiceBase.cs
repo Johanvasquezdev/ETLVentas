@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -32,7 +32,7 @@ namespace ETLVentas.Data.Services
             _logger = logger;
         }
 
-        public async Task<EntityProcessResult> ProcessAsync(string filePath)
+        public virtual async Task<EntityProcessResult> ProcessAsync(string filePath)
         {
             var sw = Stopwatch.StartNew();
             var startTime = DateTime.Now;
@@ -99,3 +99,4 @@ namespace ETLVentas.Data.Services
             IAnalisisDeVentasContextProcedures procedures);
     }
 }
+

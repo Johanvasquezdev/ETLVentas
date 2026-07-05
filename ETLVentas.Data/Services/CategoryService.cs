@@ -32,7 +32,7 @@ namespace ETLVentas.Data.Services
             _duplicateValidator = duplicateValidator;
         }
 
-        public override async Task<EtlReport> ExecuteAsync()
+        public override async Task<EntityProcessResult> ProcessAsync(string filePath)
         {
             // Cargar categorías existentes en memoria para evitar N+1 queries
             var dbCategories = await _context.Categories.AsNoTracking().ToListAsync();
@@ -42,7 +42,7 @@ namespace ETLVentas.Data.Services
                 _existingCategories.Add(c.CategoryName.ToLower());
             }
 
-            return await base.ExecuteAsync();
+            return await base.ProcessAsync(filePath);
         }
 
         protected override async Task ProcessRecordAsync(
@@ -82,3 +82,4 @@ namespace ETLVentas.Data.Services
         }
     }
 }
+

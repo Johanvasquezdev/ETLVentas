@@ -35,7 +35,7 @@ namespace ETLVentas.Data.Services
             _refValidator = refValidator;
         }
 
-        public override async Task<EtlReport> ExecuteAsync()
+        public override async Task<EntityProcessResult> ProcessAsync(string filePath)
         {
             // Cargar ciudades existentes en memoria para evitar N+1 queries
             var dbCities = await _context.Cities.AsNoTracking().ToListAsync();
@@ -45,7 +45,7 @@ namespace ETLVentas.Data.Services
                 _existingCities.Add($"{c.CityName.ToLower()}_{c.CountryId}");
             }
 
-            return await base.ExecuteAsync();
+            return await base.ProcessAsync(filePath);
         }
 
         protected override async Task ProcessRecordAsync(
@@ -93,3 +93,4 @@ namespace ETLVentas.Data.Services
         }
     }
 }
+
